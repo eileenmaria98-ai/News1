@@ -1,0 +1,33 @@
+name: Tägliches Briefing
+
+on:
+  schedule:
+    - cron: "17 4 * * *"   # 05:17 (Winter) / 06:17 (Sommer) Schweizer Zeit
+  workflow_dispatch: {}     # manuell starten: Actions → «Tägliches Briefing» → Run workflow
+
+permissions:
+  contents: write
+
+concurrency: briefing
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Briefing erstellen
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python briefing.py
+      - name: Ergebnis speichern
+        run: |
+          git config user.name "briefing-bot"
+          git config user.email "briefing-bot@users.noreply.github.com"
+          git add docs
+          git diff --cached --quiet || git commit -m "Briefing $(date +%F)"
+          git push
